@@ -1,49 +1,83 @@
-Last login: Thu Mar 15 11:42:52 on ttys002
-dhcp-39-14-34:~ lukecjm$ ssh webserver
-Welcome to Ubuntu 16.04.4 LTS (GNU/Linux 4.4.0-112-generic x86_64)
+import os
+import base64
+import json
 
- * Documentation:  https://help.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/advantage
+from cryptography.hazmat.primitives import padding
+from base64 import b64decode
+from base64 import b64encode
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import (
+    Cipher, algorithms, modes
+)
 
-  System information as of Thu Mar 15 20:17:04 UTC 2018
+key_size = 32
+IVLength = 16
 
-  System load:  0.0               Processes:           124
-  Usage of /:   37.8% of 7.74GB   Users logged in:     1
-  Memory usage: 37%               IP address for eth0: 172.31.34.193
-  Swap usage:   0%
+def encrypt(key, plaintext: bytes, iv):
+    if len(key) < key_size:
+        print("Error: the key must be greater than 256-bits in length")
+        return ()
 
-  Graph this data and manage this system at:
-    https://landscape.canonical.com/
+    # Construct an AES-GCM Cipher object with the given key and a
+    # randomly generated IV.
+    encryptor = Cipher(
+        algorithms.AES(key),
+        modes.CBC(iv),
+        default_backend()
+    ).encryptor()
 
-  Get cloud support with Ubuntu Advantage Cloud Guest:
-    http://www.ubuntu.com/business/services/cloud
+    # Encrypt the plaintext and get the associated ciphertext.
+    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
 
-19 packages can be updated.
-10 updates are security updates.
+    return ciphertext
 
+def decrypt(ciphertext,key, iv):
+    if len(key) < key_size:
+        print("Error: The key must be 256-bits in length.")
+        return ()
 
-Last login: Thu Mar 15 18:59:57 2018 from 134.139.206.52
-ubuntu@ip-172-31-34-193:~$ cd PythonVirtualEnv/bin
-ubuntu@ip-172-31-34-193:~/PythonVirtualEnv/bin$ ls
-activate       easy_install-3.5  FinalEncryption.py  pip3
-activate.csh   encrypt.py        main.py             pip3.5
-activate.fish  encrypt.pyc       main.pyc            __pycache__
-decrypted.txt  fileDecrypt.py    MyEncryption.py     python
-decrypt.py     fileDecrypt.pyc   MyEncryption.pyc    python3
-decrypt.pyc    fileEncrypt.py    P51.jpg             toDecrypt.json
-easy_install   fileEncrypt.pyc   pip                 toEncrypt.txt
-ubuntu@ip-172-31-34-193:~/PythonVirtualEnv/bin$ nano FinalEncryption.py
+    # Construct an AES-GCM Cipher object with the given key and a
+    # randomly generated IV.
+    decryptor = Cipher(
+        algorithms.AES(key),
+        modes.CBC(iv),
+        default_backend()
+    ).decryptor()
 
+    # Decrypt the plaintext and get the associated ciphertext.
+    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
 
+    return plaintext
 
+def fileEncrypt (filename, key, iv, storeToFile):
 
+    name, ext = os.path.splitext(filename)
 
+    with open(filename, "rb") as someData:
+        plaintext = someData.read()
 
+    #pads the plaintext
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(plaintext) + padder.finalize()
 
+    ciphertext = encrypt(key, padded_data, iv)
 
-  GNU nano 2.5.3             File: FinalEncryption.py                                  
+    data = {
+        'IV': b64encode(iv).decode('utf-8'),
+        'Key': b64encode(key).decode('utf-8'),
+        'Text': b64encode(ciphertext).decode('utf-8'),
+        'Extension': ext
+        }
 
+    with open(storeToFile, 'w') as outFile:
+        json.dump(data, outFile)
+    outFile.close()
+
+    return ()
+
+def fileDecrypt (filename, storeToFile):
+
+    with open(filename, 'r') as json_file:
         data = json.load(json_file)
 
     key = b64decode(data["Key"])
@@ -68,7 +102,7 @@ def main():
     #print('\n\nBEGIN MYENCRYPT AND MYDECRYPT STRING TEST')
     string_key = os.urandom(key_size)
     string_IV = os.urandom(IVLength)
-    #string_to_enc = "This is the test string to test out the encryption and decryptio$
+    #string_to_enc = "This is the test string to test out the encryption and decryption $
     #print('string to encrypt: ' + string_to_enc)
     #string_enc = encrypt.encrypt(string_key, string_to_enc, string_IV)
 #    print('encrypted string: ' + string_enc.decode("utf-8"))
