@@ -13,11 +13,14 @@ from cryptography.hazmat.primitives.ciphers import (
 key_size = 32
 IVLength = 16
 
-def encrypt(key, plaintext: bytes, iv):
+def encrypt(key, plaintext):
     if len(key) < key_size:
         print("Error: the key must be greater than 256-bits in length")
         return ()
 
+    # Initializes the iv
+    string_IV = os.urandom(IVLength)
+    iv = b64encode(string_IV).decode('utf-8')
     # Construct an AES-GCM Cipher object with the given key and a
     # randomly generated IV.
     encryptor = Cipher(
@@ -29,7 +32,7 @@ def encrypt(key, plaintext: bytes, iv):
     # Encrypt the plaintext and get the associated ciphertext.
     ciphertext = encryptor.update(plaintext) + encryptor.finalize()
 
-    return ciphertext
+    return (ciphertext, iv)
 
 def decrypt(ciphertext,key, iv):
     if len(key) < key_size:
@@ -49,7 +52,7 @@ def decrypt(ciphertext,key, iv):
 
     return plaintext
 
-def fileEncrypt (filename, key, iv, storeToFile):
+def fileEncrypt (filename):
 
     name, ext = os.path.splitext(filename)
 
@@ -60,30 +63,16 @@ def fileEncrypt (filename, key, iv, storeToFile):
     padder = padding.PKCS7(128).padder()
     padded_data = padder.update(plaintext) + padder.finalize()
 
+    string_key = os.urandom(key_size)
+
     ciphertext = encrypt(key, padded_data, iv)
 
-    data = {
-        'IV': b64encode(iv).decode('utf-8'),
-        'Key': b64encode(key).decode('utf-8'),
-        'Text': b64encode(ciphertext).decode('utf-8'),
-        'Extension': ext
-        }
+    someData.close()
+    return (ciphertext, iv, key, ext)
 
-    with open(storeToFile, 'w') as outFile:
-        json.dump(data, outFile)
-    outFile.close()
+def fileDecrypt (filename):
 
-    return ()
-
-def fileDecrypt (filename, storeToFile):
-
-    with open(filename, 'r') as json_file:
-        data = json.load(json_file)
-
-    key = b64decode(data["Key"])
-    iv = b64decode(data["IV"])
-    ciphertext = b64decode(data["Text"])
-    ext = data["Extension"]
+    key, iv, ciphertext, ext = loadFileFromJSON(filename)
 
     plaintext = decrypt(ciphertext, key, iv)
 
@@ -91,17 +80,43 @@ def fileDecrypt (filename, storeToFile):
     unpadder = padding.PKCS7(128).unpadder()
     plaintext = unpadder.update(plaintext) + unpadder.finalize()
 
-    with open(storeToFile, "wb") as outFile:
-        outFile.write(plaintext)
-        outFile.close()
+    return (plaintext, ext)
 
-    return ()
+def loadfileFromJSON(filepath):
+
+    with open(filename, 'r') as json_file:
+        data = json.load(json_file)
+
+    key = b64decode(data["Key"])
+    iv = b64decode(data["IV"])
+    text = b64decode(data["Text"])
+    ext = data["Extension"]
+
+    json_file.close()
+    return (key, iv, text, ext)
+
+def saveFileAsJSON (saveFilePath, iv, string_key, text, ext):
+
+    data = {
+        'IV': iv,
+        'Key': b64encode(key).decode('utf-8'),
+        'Text': b64encode(ciphertext).decode('utf-8'),
+        'Extension': ext
+        }
+
+    with open(savefilePath, 'w') as outFile:
+        json.dump(data, outFile)
+    outFile.close()
+
+def saveFile(filename, plaintext, ext):
+
+    with open(filename + ext, "wb") as sFile:
+        sFile.write(plaintext)
+    sFile.close()
 
 def main():
     #-----------------------------String test-----------------------------
     #print('\n\nBEGIN MYENCRYPT AND MYDECRYPT STRING TEST')
-    string_key = os.urandom(key_size)
-    string_IV = os.urandom(IVLength)
     #string_to_enc = "This is the test string to test out the encryption and decryption $
     #print('string to encrypt: ' + string_to_enc)
     #string_enc = encrypt.encrypt(string_key, string_to_enc, string_IV)
@@ -111,8 +126,10 @@ def main():
     #print('END MYENCRYPT AND MYDECRYPT STRING TEST')
     #-----------------------------/String test----------------------------
 
-    fileEncrypt('P51.jpg', string_key, string_IV, 'toDecrypt.json')
+    ciphertext, iv, key, ext = fileEncrypt('P51.jpg')
+    saveFileAsJSON('toDecrypt.json', iv, key, ciphertext, ext)
 
-    fileDecrypt('toDecrypt.json', 'P51decrypt.jpg')
+    plaintext, ext = fileDecrypt('toDecrypt.json')
+    saveFile('P51decrypted', plaintext, ext)
 if __name__ == '__main__':
     main()
