@@ -45,8 +45,6 @@ def RSAKeyGen (pathToPrivateKey, pathToPublicKey):
 def RSAEncrypt(filepath, RSA_Publickey_filepath):
     C, IV, key, ext = fileEncrypt(filepath)
 
-    saveFile("testKeyForRSAEncyption", b64encode(key).decode('utf-8'), ".txt")
-
     #load
     with open(RSA_Publickey_filepath, "rb") as public_key:
         public_key = serialization.load_pem_public_key(
@@ -62,7 +60,6 @@ def RSAEncrypt(filepath, RSA_Publickey_filepath):
         label=None
         )
     )
-    saveFile("testKeyForRSAEncyption2", b64encode(RSACipher).decode('utf-8'), ".txt")
 
     return(RSACipher, C, IV, ext)
 
