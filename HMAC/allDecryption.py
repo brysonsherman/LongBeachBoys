@@ -1,6 +1,6 @@
+
 import os
-from fileManagement import loadFileFromJSON
-from decrypt import decrypt
+from fileManagement import loadFileFromJSON, saveFile
 from cryptography.hazmat.primitives.asymmetric import padding as a_padding
 from cryptography.hazmat.primitives import serialization, hashes, hmac
 from cryptography.hazmat.backends import default_backend
@@ -9,8 +9,19 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import (
     Cipher, algorithms, modes
 )
+from keyPaths import keyPaths
 
 key_size = 32
+
+def decryptDirectory(filepathToDirectory):
+    fileList = os.listdir(filepathToDirectory)
+    os.chdir(filepathToDirectory)
+
+    for file in fileList:
+         name, ext = os.path.splitext(file)
+         plaintext, ext = RSADecrypt(file, keyPaths.pathToPrivateKey)
+         saveFile(name, plaintext, ext)
+         os.remove(file)
 
 def decrypt(ciphertext,key, iv):
     if len(key) < key_size:
@@ -50,7 +61,6 @@ def RSADecrypt(filepath, RSA_PrivateKeyPath):
             backend = default_backend())
 
     ciphertext, RSAcipher, iv, tag, ext = loadFileFromJSON(filepath)
-
     combinedKey = private_key.decrypt(RSAcipher,
                               a_padding.OAEP(mgf=a_padding.MGF1(algorithm=hashes.SHA256()),
                               algorithm=hashes.SHA256(),
@@ -61,9 +71,7 @@ def RSADecrypt(filepath, RSA_PrivateKeyPath):
     HMACKey = combinedKey[32:64]
 
     h = hmac.HMAC(HMACKey, hashes.SHA256(), backend = default_backend())
-
     h.update(ciphertext)
-
     h.verify(tag)
     plaintext = decrypt(ciphertext, ENCKey, iv)
 
