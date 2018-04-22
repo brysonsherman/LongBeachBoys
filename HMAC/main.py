@@ -18,7 +18,8 @@ def main():
     #print('END MYENCRYPT AND MYDECRYPT STRING TEST')
     #-----------------------------/String test----------------------------
 
-    RSAKeyGen(keyPaths.pathToPrivateKey, keyPaths.pathToPublicKey)
+    if(not os.path.isfile(keyPaths.pathToPrivateKey) and not os.path.isfile(kayPaths.pathToPrivateKey)):
+        RSAKeyGen(keyPaths.pathToPrivateKey, keyPaths.pathToPublicKey)
     workingDirectory = os.getcwd()
     filePathToDirectory = workingDirectory +"/TestDirectory"
 
