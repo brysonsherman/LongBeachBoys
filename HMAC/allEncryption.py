@@ -17,9 +17,10 @@ def encryptDirectory(filepathToDirectory):
     fileList = os.listdir(filepathToDirectory)
     os.chdir(filepathToDirectory)
     for file in fileList:
-         RSAcipher, ciphertext, iv, tag, ext, filename = RSAEncrypt(file,  keyPaths.pathToPublicKey)
-         saveFileAsJSON( filename + '.json', ciphertext, iv, RSAcipher, tag,  ext)
-         os.remove(file)
+         if(not os.path.isdir(file)):
+             RSAcipher, ciphertext, iv, tag, ext, filename = RSAEncrypt(file,  keyPaths.pathToPublicKey)
+             saveFileAsJSON( filename + '.json', ciphertext, iv, RSAcipher, tag,  ext)
+             os.remove(file)
 
 def fileEncryptMAC (filename):
 
