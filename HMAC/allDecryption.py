@@ -18,10 +18,11 @@ def decryptDirectory(filepathToDirectory):
     os.chdir(filepathToDirectory)
 
     for file in fileList:
-         name, ext = os.path.splitext(file)
-         plaintext, ext = RSADecrypt(file, keyPaths.pathToPrivateKey)
-         saveFile(name, plaintext, ext)
-         os.remove(file)
+         if(not os.path.isdir(file)):
+             name, ext = os.path.splitext(file)
+             plaintext, ext = RSADecrypt(file, keyPaths.pathToPrivateKey)
+             saveFile(name, plaintext, ext)
+             os.remove(file)
 
 def decrypt(ciphertext,key, iv):
     if len(key) < key_size:
